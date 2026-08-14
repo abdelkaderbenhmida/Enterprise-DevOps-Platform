@@ -1,0 +1,12 @@
+---
+- name: Setup PostgreSQL primary (streaming replication source)
+  hosts: postgresql_primary
+  become: true
+  roles:
+    - postgresql-primary
+
+- name: Setup PostgreSQL replica (pg_basebackup + standby)
+  hosts: postgresql_replica
+  become: true
+  roles:
+    - postgresql-replica

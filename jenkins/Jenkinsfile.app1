@@ -1,0 +1,123 @@
+@Library('devops-shared-lib') _
+
+// NOTE: every stage checks out the repo itself — stages run on different
+// labelled agents (docker/python/node/kubernetes) and must not assume a
+// shared workspace. Image refs are computed inside script blocks AFTER
+// checkout, never in the environment block (no git repo exists there, and
+// GITHUB_REPOSITORY_OWNER is a GitHub Actions variable that Jenkins lacks).
+
+pipeline {
+  agent none
+
+  environment {
+    REGISTRY = 'ghcr.io'
+    REGISTRY_CREDENTIALS = 'docker-registry-creds'
+    KUBECONFIG_CREDENTIALS = 'kubeconfig'
+    APP_NAME = 'app1'
+    NAMESPACE = 'app1'
+  }
+
+  stages {
+    stage('Backend - Test') {
+      agent { label 'python' }
+      steps {
+        checkout scm
+        dir('applications/app1/backend') {
+          sh 'pip install -r requirements.txt'
+          sh 'pytest -v --tb=short'
+        }
+      }
+    }
+
+    stage('Frontend - Test') {
+      agent { label 'node' }
+      steps {
+        checkout scm
+        dir('applications/app1/frontend') {
+          sh 'npm ci'
+          sh 'npm test -- --watchAll=false --passWithNoTests'
+        }
+      }
+    }
+
+    stage('Backend - Build & Push') {
+      agent { label 'docker' }
+      steps {
+        checkout scm
+        script {
+          def commit = gitCommitShort()
+          def org = imageOrg()
+          def backendImage = "${REGISTRY}/${org}/${APP_NAME}-backend"
+          def frontendImage = "${REGISTRY}/${org}/${APP_NAME}-frontend"
+          docker.build("${backendImage}:${commit}", "-f docker/app1-backend/Dockerfile .")
+          docker.build("${frontendImage}:${commit}", "-f docker/app1-frontend/Dockerfile .")
+          docker.withRegistry("https://${REGISTRY}", REGISTRY_CREDENTIALS) {
+            docker.image("${backendImage}:${commit}").push()
+            docker.image("${frontendImage}:${commit}").push()
+          }
+        }
+      }
+    }
+
+    stage('Deploy to Kubernetes') {
+      agent { label 'kubernetes' }
+      steps {
+        checkout scm
+        script {
+          def commit = gitCommitShort()
+          def org = imageOrg()
+          def backendImage = "${REGISTRY}/${org}/${APP_NAME}-backend:${commit}"
+          def frontendImage = "${REGISTRY}/${org}/${APP_NAME}-frontend:${commit}"
+          withCredentials([file(credentialsId: KUBECONFIG_CREDENTIALS, variable: 'KUBECONFIG')]) {
+            sh """
+              export KUBECONFIG=\$KUBECONFIG
+              kubectl set image deployment/app1-backend -n ${NAMESPACE} backend=${backendImage}
+              kubectl set image deployment/app1-frontend -n ${NAMESPACE} frontend=${frontendImage}
+              kubectl rollout status deployment/app1-backend -n ${NAMESPACE} --timeout=120s
+              kubectl rollout status deployment/app1-frontend -n ${NAMESPACE} --timeout=120s
+            """
+          }
+        }
+      }
+    }
+
+    stage('Smoke Test') {
+      agent { label 'kubernetes' }
+      steps {
+        checkout scm
+        withCredentials([file(credentialsId: KUBECONFIG_CREDENTIALS, variable: 'KUBECONFIG')]) {
+          sh """
+            export KUBECONFIG=\$KUBECONFIG
+            sleep 10
+            kubectl get pods -n ${NAMESPACE} -l app=app1-backend -o jsonpath='{.items[*].status.phase}' | grep -q Running
+            kubectl get pods -n ${NAMESPACE} -l app=app1-frontend -o jsonpath='{.items[*].status.phase}' | grep -q Running
+          """
+        }
+      }
+    }
+  }
+
+  post {
+    always {
+      cleanWs()
+    }
+    failure {
+      emailext (
+        subject: "FAILED: ${env.JOB_NAME} - Build #${env.BUILD_NUMBER}",
+        body: "Build failed: ${env.BUILD_URL}",
+        to: 'devops-team@company.com'
+      )
+    }
+  }
+}
+
+def gitCommitShort() {
+  return sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+}
+
+def imageOrg() {
+  def url = sh(script: 'git remote get-url origin 2>/dev/null', returnStdout: true).trim()
+  if (!url) return env.IMAGE_ORG ?: 'your-org'
+  def parts = url.split('[/:]')
+  return parts[parts.length - 2]
+}

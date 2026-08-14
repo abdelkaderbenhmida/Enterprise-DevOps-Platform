@@ -1,0 +1,4 @@
+---
+jenkins_master_host: "vm05-jenkins-master"
+jenkins_url: "http://vm05-jenkins-master:8080"
+jenkins_agent_labels: "docker node"

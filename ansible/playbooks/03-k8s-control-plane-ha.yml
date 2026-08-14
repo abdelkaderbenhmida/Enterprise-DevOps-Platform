@@ -1,0 +1,12 @@
+---
+- name: Initialize first Kubernetes control plane (kubeadm init via HAProxy VIP)
+  hosts: k8s_control_plane[0]
+  become: true
+  roles:
+    - k8s-control-plane
+
+- name: Join additional Kubernetes control planes (k8s-cp2, k8s-cp3)
+  hosts: k8s_control_plane[1:]
+  become: true
+  roles:
+    - k8s-control-plane-join

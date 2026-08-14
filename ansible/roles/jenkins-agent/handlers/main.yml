@@ -1,0 +1,7 @@
+---
+# Jenkins agent role handlers
+- name: restart jenkins-agent
+  systemd:
+    name: jenkins-agent
+    state: restarted
+    daemon_reload: yes

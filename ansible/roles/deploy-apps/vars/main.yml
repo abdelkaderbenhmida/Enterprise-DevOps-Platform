@@ -1,0 +1,11 @@
+---
+# Deploy apps role vars
+deploy_apps_kubeconfig: "/home/ubuntu/.kube/config"
+deploy_apps_manifests_path: "{{ playbook_dir }}/../kubernetes"
+deploy_apps_namespaces:
+  - app1
+  - app2
+  - app3
+  - ingress-nginx
+  - monitoring
+deploy_apps_wait_timeout: "120s"

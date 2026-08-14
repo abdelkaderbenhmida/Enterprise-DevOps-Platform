@@ -1,0 +1,35 @@
+---
+ansible_python_interpreter: /usr/bin/python3
+ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+
+haproxy_vip: "10.0.1.100"
+haproxy_interface: "eth0"
+haproxy_stats_password: "{{ lookup('env', 'HAPROXY_STATS_PASSWORD') | default('changeme', true) }}"
+keepalived_auth_pass: "{{ lookup('env', 'KEEPALIVED_AUTH_PASS') | default('changeme', true) }}"
+
+k8s_version: "1.29.0"
+k8s_pod_cidr: "10.244.0.0/16"
+k8s_service_cidr: "10.96.0.0/12"
+
+docker_registry: "ghcr.io"
+docker_registry_user: "{{ lookup('env', 'DOCKER_REGISTRY_USER') | default('changeme', true) }}"
+docker_registry_password: "{{ lookup('env', 'DOCKER_REGISTRY_PASSWORD') | default('changeme', true) }}"
+
+github_token: "{{ lookup('env', 'GITHUB_TOKEN') | default('changeme', true) }}"
+
+jenkins_admin_user: "{{ lookup('env', 'JENKINS_ADMIN_USER') | default('admin', true) }}"
+jenkins_admin_password: "{{ lookup('env', 'JENKINS_ADMIN_PASSWORD') | default('changeme', true) }}"
+jenkins_master_host: "vm05-jenkins-master"
+jenkins_master_pub_key: "{{ lookup('env', 'JENKINS_MASTER_PUB_KEY') | default('', true) }}"
+jenkins_agent_secret: "{{ lookup('env', 'JENKINS_AGENT_SECRET') | default('changeme', true) }}"
+
+pg_replication_password: "{{ lookup('env', 'PG_REPLICATION_PASSWORD') | default('changeme', true) }}"
+pg_app1_password: "{{ lookup('env', 'PG_APP1_PASSWORD') | default('changeme', true) }}"
+pg_monitoring_password: "{{ lookup('env', 'PG_MONITORING_PASSWORD') | default('changeme', true) }}"
+primary_host: "vm17-pg-primary"
+
+prometheus_version: "2.48.0"
+node_exporter_version: "1.7.0"
+postgres_exporter_version: "0.14.0"
+
+jenkins_ssh_private_key: "{{ lookup('env', 'JENKINS_SSH_PRIVATE_KEY') | default('', true) }}"

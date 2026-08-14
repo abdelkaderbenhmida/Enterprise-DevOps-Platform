@@ -1,0 +1,60 @@
+---
+- name: Create apt keyrings directory
+  file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: '0755'
+
+- name: Add Kubernetes apt repo signing key
+  apt_key:
+    url: https://pkgs.k8s.io/core:/stable:/v1.29/deb/Release.key
+    state: present
+    keyring: /etc/apt/keyrings/kubernetes.gpg
+
+- name: Add Kubernetes apt repository
+  apt_repository:
+    repo: "deb [signed-by=/etc/apt/keyrings/kubernetes.gpg] https://pkgs.k8s.io/core:/stable:/v1.29/deb /"
+    state: present
+
+- name: Create containerd config directory
+  file:
+    path: /etc/containerd
+    state: directory
+    mode: '0755'
+
+- name: Install kubeadm, kubelet, kubectl
+  apt:
+    name:
+      - kubeadm={{ k8s_version }}-*
+      - kubelet={{ k8s_version }}-*
+      - kubectl={{ k8s_version }}-*
+    state: present
+    update_cache: yes
+
+- name: Hold Kubernetes packages
+  dpkg_selections:
+    name: "{{ item }}"
+    selection: hold
+  loop:
+    - kubeadm
+    - kubelet
+    - kubectl
+
+- name: Configure kubelet
+  copy:
+    dest: /etc/default/kubelet
+    content: |
+      KUBELET_EXTRA_ARGS="--cgroup-driver=systemd --container-runtime-endpoint=unix:///run/containerd/containerd.sock"
+  notify: restart kubelet
+
+- name: Enable kubelet
+  systemd:
+    name: kubelet
+    enabled: yes
+    state: started
+
+- name: Create kubeadm config directory
+  file:
+    path: /etc/kubernetes/kubeadm
+    state: directory
+    mode: '0755'

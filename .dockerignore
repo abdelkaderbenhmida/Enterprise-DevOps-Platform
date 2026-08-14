@@ -1,0 +1,15 @@
+.git/
+.terraform/
+node_modules/
+__pycache__/
+venv/
+*.pyc
+docs/
+ansible/
+jenkins/
+scripts/
+terraform/
+monitoring/
+kubernetes/
+.opencode/
+k8s-cp-join-info.json

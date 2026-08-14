@@ -1,0 +1,18 @@
+---
+extends: default
+rules:
+  line-length:
+    max: 140
+    level: warning
+  truthy:
+    allowed-values: ['true', 'false', 'yes', 'no', 'on', 'off']
+    check-keys: false
+  new-line-at-end-of-file:
+    level: warning
+  comments:
+    min-spaces-from-content: 1
+    level: warning
+  indentation:
+    spaces: consistent
+    indent-sequences: whatever
+    level: warning

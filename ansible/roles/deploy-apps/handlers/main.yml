@@ -1,0 +1,5 @@
+---
+# Deploy apps role handlers
+- name: restart k8s deployments
+  debug:
+    msg: "Deployment rollout triggered - no handler action needed (kubectl rollout handles it)"

@@ -1,0 +1,6 @@
+---
+- name: Common baseline setup for all nodes
+  hosts: all
+  become: true
+  roles:
+    - common

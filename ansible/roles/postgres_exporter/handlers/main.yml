@@ -1,0 +1,7 @@
+---
+# postgres_exporter role handlers
+- name: restart postgres_exporter
+  systemd:
+    name: postgres_exporter
+    state: restarted
+    daemon_reload: yes

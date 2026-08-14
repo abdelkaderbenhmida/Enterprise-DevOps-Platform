@@ -1,0 +1,12 @@
+# Jenkins plugins (mirror of ansible/roles/jenkins-master plugin loop)
+workflow-aggregator
+git
+docker-workflow
+kubernetes
+kubernetes-cli
+configuration-as-code
+credentials-binding
+prometheus
+pipeline-utility-steps
+junit
+emailext

@@ -1,0 +1,6 @@
+---
+# postgresql-replica role handlers
+- name: restart postgresql
+  systemd:
+    name: postgresql
+    state: restarted

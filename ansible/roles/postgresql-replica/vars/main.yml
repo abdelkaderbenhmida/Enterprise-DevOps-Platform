@@ -1,0 +1,9 @@
+---
+# postgresql-replica role vars
+postgresql_version: "15"
+postgresql_primary_host: "10.0.4.10"
+postgresql_replica_host: "10.0.4.11"
+postgresql_port: 5432
+postgresql_replication_user: "replicator"
+postgresql_replication_password: "{{ pg_replication_password }}"
+postgresql_primary_slot_name: "replica_slot_{{ inventory_hostname }}"

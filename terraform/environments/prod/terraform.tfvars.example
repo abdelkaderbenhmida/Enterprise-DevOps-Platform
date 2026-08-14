@@ -1,0 +1,10 @@
+# Terraform variables for prod environment (Azure)
+# Copy this file to terraform.tfvars and fill in your values
+
+location = "westeurope"
+
+# Paste the contents of your PUBLIC ssh key, e.g. cat ~/.ssh/id_rsa.pub
+ssh_public_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQAB..."
+
+# Optional overrides
+# vnet_cidr = "10.0.0.0/16"

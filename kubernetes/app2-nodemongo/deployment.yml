@@ -1,0 +1,53 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app2-node
+  namespace: app2
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: app2-node
+  template:
+    metadata:
+      labels:
+        app: app2-node
+    spec:
+      containers:
+      - name: node
+        # Replaced at deploy time by Jenkins (commit-sha tag) or
+        # local/k8s/deploy-to-kind.sh. Change <your-org> to the real GHCR org.
+        # Never use :latest — it breaks rollback and rolling-update determinism.
+        image: ghcr.io/your-org/app2-node:v1.0.0
+        ports:
+        - containerPort: 3000
+        envFrom:
+        - configMapRef:
+            name: app2-config
+        - secretRef:
+            name: app2-secrets
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"

@@ -1,0 +1,9 @@
+---
+# postgres_exporter role defaults
+postgres_exporter_version: "0.14.0"
+postgres_exporter_user: "postgres_exporter"
+postgres_exporter_home: "/var/lib/postgres_exporter"
+postgres_exporter_port: 9187
+postgres_exporter_data_source_name: "postgresql://monitoring:{{ pg_monitoring_password }}@localhost:5432/postgres?sslmode=disable"
+postgres_exporter_web_listen_address: ":9187"
+postgres_exporter_extend_query_path: "/etc/postgres_exporter/queries.yaml"

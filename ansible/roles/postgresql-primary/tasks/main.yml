@@ -1,0 +1,113 @@
+---
+- name: Create apt keyrings directory
+  file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: '0755'
+
+- name: Add PostgreSQL apt repo signing key (PGDG)
+  apt_key:
+    url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
+    state: present
+    keyring: /etc/apt/keyrings/pgdg.gpg
+
+- name: Add PostgreSQL apt repository (PGDG)
+  apt_repository:
+    repo: "deb [signed-by=/etc/apt/keyrings/pgdg.gpg] https://apt.postgresql.org/pub/repos/apt {{ ansible_distribution_release }}-pgdg main"
+    state: present
+
+- name: Install PostgreSQL
+  apt:
+    name:
+      - postgresql-15
+      - postgresql-client-15
+      - postgresql-contrib-15
+    state: present
+    update_cache: yes
+
+- name: Configure PostgreSQL for replication
+  copy:
+    dest: /etc/postgresql/15/main/conf.d/replication.conf
+    content: |
+      wal_level = replica
+      max_wal_senders = 10
+      max_replication_slots = 10
+      hot_standby = on
+      wal_keep_size = 1GB
+      listen_addresses = '*'
+      port = 5432
+  notify: restart postgresql
+
+- name: Configure pg_hba for replication
+  copy:
+    dest: /etc/postgresql/15/main/pg_hba.conf
+    content: |
+      # TYPE  DATABASE        USER            ADDRESS                 METHOD
+      local   all             postgres                                peer
+      local   all             all                                     peer
+      host    all             all             127.0.0.1/32            md5
+      host    all             all             ::1/128                 md5
+      host    replication     replicator      10.0.4.0/24             md5
+      host    all             all             10.0.3.0/24             md5
+      host    all             all             10.0.2.0/24             md5
+  notify: restart postgresql
+
+- name: Start and enable PostgreSQL
+  systemd:
+    name: postgresql
+    enabled: yes
+    state: started
+
+- name: Create replication user
+  postgresql_user:
+    name: replicator
+    password: "{{ pg_replication_password }}"
+    role_attr: REPLICATION
+    state: present
+  become: yes
+  become_user: postgres
+
+- name: Create physical replication slot for each replica
+  command: "psql -Atc \"SELECT pg_create_physical_replication_slot('replica_slot_{{ item }}');\""
+  become: yes
+  become_user: postgres
+  register: slot_result
+  failed_when: false
+  changed_when: "'already exists' not in slot_result.stderr and 'already exists' not in slot_result.stdout"
+  loop: "{{ groups.get('postgresql_replica', []) }}"
+
+- name: Create application database and user
+  postgresql_db:
+    name: app1
+    state: present
+  become: yes
+  become_user: postgres
+
+- name: Create application user
+  postgresql_user:
+    name: app1
+    password: "{{ pg_app1_password }}"
+    db: app1
+    priv: ALL
+    state: present
+  become: yes
+  become_user: postgres
+
+- name: Create monitoring user for postgres_exporter
+  postgresql_user:
+    name: monitoring
+    password: "{{ pg_monitoring_password }}"
+    role_attr: LOGIN
+    state: present
+  become: yes
+  become_user: postgres
+
+- name: Grant monitoring permissions
+  postgresql_privs:
+    db: postgres
+    privs: SELECT
+    type: table
+    objs: pg_stat_database,pg_stat_replication,pg_database
+    role: monitoring
+  become: yes
+  become_user: postgres

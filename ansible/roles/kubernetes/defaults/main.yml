@@ -1,0 +1,19 @@
+---
+# kubernetes role defaults
+calico_version: "v3.27.0"
+calico_helm_repo: "https://docs.tigera.io/calico/charts"
+calico_chart: "projectcalico/tigera-operator"
+calico_namespace: "tigera-operator"
+
+ingress_nginx_version: "4.10.0"
+ingress_nginx_helm_repo: "https://kubernetes.github.io/ingress-nginx"
+ingress_nginx_chart: "ingress-nginx/ingress-nginx"
+ingress_nginx_namespace: "ingress-nginx"
+ingress_nginx_nodeport_http: 30080
+ingress_nginx_nodeport_https: 30443
+
+helm_repos:
+  - name: "projectcalico"
+    url: "https://docs.tigera.io/calico/charts"
+  - name: "ingress-nginx"
+    url: "https://kubernetes.github.io/ingress-nginx"

@@ -1,0 +1,90 @@
+---
+- name: Include k8s-common
+  include_role:
+    name: k8s-common
+
+- name: Check if kubeadm init already done
+  stat:
+    path: /etc/kubernetes/admin.conf
+  register: k8s_init_done
+
+- name: Generate kubeadm init config
+  template:
+    src: kubeadm-init.yaml.j2
+    dest: /etc/kubernetes/kubeadm/init.yaml
+  when: not k8s_init_done.stat.exists
+
+- name: Initialize first control plane
+  command: kubeadm init --config /etc/kubernetes/kubeadm/init.yaml --upload-certs --v=5
+  when:
+    - not k8s_init_done.stat.exists
+    - inventory_hostname == groups['k8s_control_plane'][0]
+  register: kubeadm_init
+  changed_when: kubeadm_init.rc == 0
+
+- name: Create .kube directory for ubuntu
+  file:
+    path: /home/ubuntu/.kube
+    state: directory
+    owner: ubuntu
+    group: ubuntu
+    mode: '0755'
+  when: inventory_hostname == groups['k8s_control_plane'][0]
+
+- name: Copy admin.conf to ubuntu user
+  copy:
+    src: /etc/kubernetes/admin.conf
+    dest: /home/ubuntu/.kube/config
+    owner: ubuntu
+    group: ubuntu
+    mode: '0644'
+    remote_src: yes
+  when: inventory_hostname == groups['k8s_control_plane'][0]
+
+- name: Save join command for control planes
+  set_fact:
+    cp_join_command: "{{ kubeadm_init.stdout_lines | select('match', 'kubeadm join.*--control-plane') | first }}"
+  when:
+    - not k8s_init_done.stat.exists
+    - inventory_hostname == groups['k8s_control_plane'][0]
+
+- name: Save certificate key
+  set_fact:
+    cert_key: "{{ kubeadm_init.stdout_lines | select('match', '.*certificate-key.*') | first | regex_replace('.*certificate-key\\s+(\\S+).*', '\\1') }}"
+  when:
+    - not k8s_init_done.stat.exists
+    - inventory_hostname == groups['k8s_control_plane'][0]
+
+- name: Store join info for other control planes
+  copy:
+    dest: /tmp/k8s-cp-join-info.json
+    content: |
+      {
+        "join_command": "{{ cp_join_command }}",
+        "cert_key": "{{ cert_key }}"
+      }
+  when:
+    - not k8s_init_done.stat.exists
+    - inventory_hostname == groups['k8s_control_plane'][0]
+
+- name: Fetch join info to control machine
+  fetch:
+    src: /tmp/k8s-cp-join-info.json
+    dest: "{{ playbook_dir }}/../k8s-cp-join-info.json"
+    flat: yes
+  when:
+    - not k8s_init_done.stat.exists
+    - inventory_hostname == groups['k8s_control_plane'][0]
+  delegate_to: localhost
+
+- name: Install Calico CNI (first control plane only)
+  include_role:
+    name: kubernetes
+    tasks_from: calico
+  when: inventory_hostname == groups['k8s_control_plane'][0]
+
+- name: Install nginx-ingress controller (first control plane only)
+  include_role:
+    name: kubernetes
+    tasks_from: ingress-nginx
+  when: inventory_hostname == groups['k8s_control_plane'][0]

@@ -1,0 +1,18 @@
+---
+# node_exporter role defaults
+node_exporter_version: "1.7.0"
+node_exporter_user: "node_exporter"
+node_exporter_home: "/var/lib/node_exporter"
+node_exporter_port: 9100
+node_exporter_collectors:
+  - "systemd"
+  - "processes"
+  - "tcpstat"
+  - "udpstat"
+  - "netdev"
+  - "diskstats"
+  - "filesystem"
+  - "meminfo"
+  - "cpu"
+  - "loadavg"
+node_exporter_args: "--web.listen-address=:9100"

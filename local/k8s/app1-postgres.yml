@@ -1,0 +1,79 @@
+---
+# Local-only replacement for postgres-external-service.yml: runs the
+# PostgreSQL primary inside the cluster so app1 works without the external
+# VM17/18 pair. Same Service name (postgres-primary) the app expects.
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-primary
+  namespace: app1
+spec:
+  selector:
+    app: postgres-primary
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-primary
+  namespace: app1
+  labels:
+    app: postgres-primary
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-primary
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: postgres-primary
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16
+          args:
+            - -c
+            - wal_level=replica
+            - -c
+            - max_wal_senders=10
+            - -c
+            - max_replication_slots=10
+          env:
+            - name: POSTGRES_USER
+              value: app1
+            - name: POSTGRES_PASSWORD
+              value: changeme
+            - name: POSTGRES_DB
+              value: app1
+          ports:
+            - name: postgres
+              containerPort: 5432
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "app1", "-d", "app1"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "app1", "-d", "app1"]
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: data
+          emptyDir: {}

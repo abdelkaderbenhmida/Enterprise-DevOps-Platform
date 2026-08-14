@@ -1,0 +1,17 @@
+---
+# kubernetes role handlers
+- name: restart calico
+  kubernetes.core.k8s:
+    state: restarted
+    kind: DaemonSet
+    name: calico-node
+    namespace: calico-system
+  delegate_to: "{{ groups['k8s_control_plane'][0] }}"
+
+- name: restart ingress-nginx
+  kubernetes.core.k8s:
+    state: restarted
+    kind: Deployment
+    name: ingress-nginx-controller
+    namespace: ingress-nginx
+  delegate_to: "{{ groups['k8s_control_plane'][0] }}"

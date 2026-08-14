@@ -1,0 +1,44 @@
+---
+- name: Add Helm repository for Calico
+  shell: |
+    helm repo add projectcalico https://docs.tigera.io/calico/charts
+    helm repo update
+  delegate_to: "{{ groups['k8s_control_plane'][0] }}"
+  become: yes
+  become_user: ubuntu
+
+- name: Install Calico CNI
+  kubernetes.core.helm:
+    name: calico
+    chart_ref: projectcalico/tigera-operator
+    release_namespace: tigera-operator
+    create_namespace: yes
+    values:
+      installation:
+        kubernetesProvider: ""
+        calicoNetwork:
+          ipPools:
+            - blockSize: 26
+              cidr: "{{ k8s_pod_cidr }}"
+              encapsulation: VXLANCrossSubnet
+              natOutgoing: Enabled
+              nodeSelector: all()
+  delegate_to: "{{ groups['k8s_control_plane'][0] }}"
+  become: yes
+  become_user: ubuntu
+
+- name: Wait for Calico pods to be ready
+  kubernetes.core.k8s_info:
+    kind: Pod
+    namespace: calico-system
+    label_selectors:
+      - k8s-app == calico-node
+  register: calico_pods
+  until:
+    - calico_pods.resources | length > 0
+    - calico_pods.resources | selectattr('status.phase', 'equalto', 'Running') | list | length == calico_pods.resources | length
+  retries: 30
+  delay: 10
+  delegate_to: "{{ groups['k8s_control_plane'][0] }}"
+  become: yes
+  become_user: ubuntu

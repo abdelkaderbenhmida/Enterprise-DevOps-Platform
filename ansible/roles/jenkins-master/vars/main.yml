@@ -1,0 +1,10 @@
+---
+# Jenkins master role vars
+jenkins_admin_user: "{{ lookup('env', 'JENKINS_ADMIN_USER') | default('admin', true) }}"
+jenkins_admin_password: "{{ lookup('env', 'JENKINS_ADMIN_PASSWORD') | default('changeme', true) }}"
+jenkins_url: "http://{{ hostvars['vm05-jenkins-master']['ansible_host'] | default('10.0.2.20') }}:8080"
+docker_registry: "ghcr.io"
+docker_registry_user: "{{ lookup('env', 'DOCKER_REGISTRY_USER') | default('changeme', true) }}"
+docker_registry_password: "{{ lookup('env', 'DOCKER_REGISTRY_PASSWORD') | default('changeme', true) }}"
+github_token: "{{ lookup('env', 'GITHUB_TOKEN') | default('changeme', true) }}"
+jenkins_ssh_private_key: "{{ lookup('env', 'JENKINS_SSH_PRIVATE_KEY') | default('', true) }}"

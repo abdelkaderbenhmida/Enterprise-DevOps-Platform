@@ -1,0 +1,13 @@
+---
+# postgresql-primary role vars
+postgresql_version: "15"
+postgresql_primary_host: "10.0.4.10"
+postgresql_replica_host: "10.0.4.11"
+postgresql_port: 5432
+postgresql_replication_user: "replicator"
+postgresql_replication_password: "{{ pg_replication_password }}"
+postgresql_app1_db: "app1"
+postgresql_app1_user: "app1"
+postgresql_app1_password: "{{ pg_app1_password }}"
+postgresql_monitoring_user: "monitoring"
+postgresql_monitoring_password: "{{ pg_monitoring_password }}"

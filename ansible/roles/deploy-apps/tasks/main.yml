@@ -1,0 +1,28 @@
+---
+# kubeconfig is not created here: k8s-control-plane already copies
+# /etc/kubernetes/admin.conf to ~ubuntu/.kube/config on k8s_control_plane[0],
+# and all tasks delegate to that node as the ubuntu user.
+
+- name: Deploy namespaces
+  kubernetes.core.k8s:
+    state: present
+    src: "{{ playbook_dir }}/../kubernetes/namespaces.yml"
+  delegate_to: "{{ groups['k8s_control_plane'][0] }}"
+
+- name: Deploy App1 manifests
+  kubernetes.core.k8s:
+    state: present
+    src: "{{ playbook_dir }}/../kubernetes/app1-taskmanager/"
+  delegate_to: "{{ groups['k8s_control_plane'][0] }}"
+
+- name: Deploy App2 manifests
+  kubernetes.core.k8s:
+    state: present
+    src: "{{ playbook_dir }}/../kubernetes/app2-nodemongo/"
+  delegate_to: "{{ groups['k8s_control_plane'][0] }}"
+
+- name: Deploy App3 manifests
+  kubernetes.core.k8s:
+    state: present
+    src: "{{ playbook_dir }}/../kubernetes/app3-static-site/"
+  delegate_to: "{{ groups['k8s_control_plane'][0] }}"

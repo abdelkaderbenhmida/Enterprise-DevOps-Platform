@@ -1,0 +1,26 @@
+---
+# Routes app1's internal Service name (postgres-primary) to the external
+# PostgreSQL primary VM (vm17-pg-primary, 10.0.4.10) — see spec §6.
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-primary
+  namespace: app1
+spec:
+  type: ClusterIP
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: postgres-primary
+  namespace: app1
+subsets:
+  - addresses:
+      - ip: 10.0.4.10
+    ports:
+      - name: postgres
+        port: 5432

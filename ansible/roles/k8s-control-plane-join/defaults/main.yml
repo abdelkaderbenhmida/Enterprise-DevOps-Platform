@@ -1,0 +1,7 @@
+---
+# k8s-control-plane-join role defaults
+k8s_version: "1.29.0"
+k8s_pod_cidr: "10.244.0.0/16"
+k8s_service_cidr: "10.96.0.0/12"
+k8s_control_plane_endpoint: "10.0.1.100:6443"
+k8s_certificate_key: ""

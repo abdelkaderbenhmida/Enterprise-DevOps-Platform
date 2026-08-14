@@ -1,0 +1,22 @@
+---
+- name: Include k8s-common
+  include_role:
+    name: k8s-common
+
+- name: Check if kubeadm join already done
+  stat:
+    path: /etc/kubernetes/kubelet.conf
+  register: k8s_join_done
+
+- name: Get worker join command from first control plane
+  shell: |
+    kubeadm token create --print-join-command
+  register: worker_join_cmd
+  delegate_to: "{{ groups.get('k8s_control_plane', []) | first | default(inventory_hostname) }}"
+  when: not k8s_join_done.stat.exists and groups.get('k8s_control_plane', []) | length > 0
+
+- name: Join worker node
+  command: "{{ worker_join_cmd.stdout }} --v=5"
+  when: not k8s_join_done.stat.exists and worker_join_cmd is defined and worker_join_cmd.stdout | default('') | length > 0
+  register: kubeadm_join_worker
+  changed_when: kubeadm_join_worker.rc == 0

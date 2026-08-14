@@ -1,0 +1,6 @@
+---
+# Grafana role vars
+grafana_admin_user: "{{ lookup('env', 'JENKINS_ADMIN_USER') | default('admin', true) }}"
+grafana_admin_password: "{{ lookup('env', 'GRAFANA_ADMIN_PASSWORD') | default('admin', true) }}"
+grafana_secret_key: "{{ lookup('env', 'GRAFANA_SECRET_KEY') | default('changeme', true) }}"
+grafana_datasource_prometheus_url: "http://{{ hostvars['vm19-prometheus']['ansible_host'] | default('10.0.5.10') }}:9090"

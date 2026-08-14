@@ -1,0 +1,17 @@
+---
+# postgresql-replica role defaults
+postgresql_version: "15"
+postgresql_packages:
+  - postgresql-15
+  - postgresql-client-15
+  - postgresql-contrib-15
+
+postgresql_replica_config:
+  hot_standby: "on"
+  wal_receiver_status_interval: "10s"
+  primary_conninfo: "host={{ primary_host }} port=5432 user=replicator password={{ pg_replication_password }} application_name={{ inventory_hostname }}"
+  primary_slot_name: "replica_slot_{{ inventory_hostname }}"
+
+postgresql_replication_user: "replicator"
+postgresql_replication_password: "{{ pg_replication_password }}"
+postgresql_primary_host: "{{ primary_host }}"

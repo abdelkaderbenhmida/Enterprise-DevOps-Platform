@@ -1,0 +1,54 @@
+---
+- name: Add Helm repository for ingress-nginx
+  shell: |
+    helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+    helm repo update
+  delegate_to: "{{ groups['k8s_control_plane'][0] }}"
+  become: yes
+  become_user: ubuntu
+
+- name: Install ingress-nginx
+  kubernetes.core.helm:
+    name: ingress-nginx
+    chart_ref: ingress-nginx/ingress-nginx
+    release_namespace: ingress-nginx
+    create_namespace: yes
+    values:
+      controller:
+        service:
+          type: NodePort
+          nodePorts:
+            http: 30080
+            https: 30443
+        config:
+          proxy-body-size: "50m"
+          proxy-read-timeout: "300"
+          proxy-send-timeout: "300"
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+        admissionWebhooks:
+          enabled: true
+  delegate_to: "{{ groups['k8s_control_plane'][0] }}"
+  become: yes
+  become_user: ubuntu
+
+- name: Wait for ingress-nginx pods to be ready
+  kubernetes.core.k8s_info:
+    kind: Pod
+    namespace: ingress-nginx
+    label_selectors:
+      - app.kubernetes.io/component == controller
+  register: ingress_pods
+  until:
+    - ingress_pods.resources | length > 0
+    - ingress_pods.resources | selectattr('status.phase', 'equalto', 'Running') | list | length == ingress_pods.resources | length
+  retries: 30
+  delay: 10
+  delegate_to: "{{ groups['k8s_control_plane'][0] }}"
+  become: yes
+  become_user: ubuntu

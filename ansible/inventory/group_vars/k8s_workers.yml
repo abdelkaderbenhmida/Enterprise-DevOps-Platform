@@ -1,0 +1,3 @@
+---
+k8s_worker_labels: "node-role.kubernetes.io/worker=true"
+k8s_worker_taints: []

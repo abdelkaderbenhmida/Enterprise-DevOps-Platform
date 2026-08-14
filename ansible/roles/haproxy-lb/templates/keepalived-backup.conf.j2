@@ -1,0 +1,30 @@
+global_defs {
+    router_id LVS_BACKUP
+}
+
+vrrp_script chk_haproxy {
+    script "killall -0 haproxy"
+    interval 2
+    weight 2
+}
+
+vrrp_instance VI_1 {
+    state BACKUP
+    interface {{ haproxy_interface }}
+    virtual_router_id 51
+    priority 100
+    advert_int 1
+    authentication {
+        auth_type PASS
+        auth_pass {{ keepalived_auth_pass }}
+    }
+    virtual_ipaddress {
+        {{ haproxy_vip }}/24 dev {{ haproxy_interface }}
+    }
+    track_script {
+        chk_haproxy
+    }
+    notify_master /etc/keepalived/notify_master.sh
+    notify_backup /etc/keepalived/notify_backup.sh
+    notify_fault /etc/keepalived/notify_fault.sh
+}

@@ -1,0 +1,89 @@
+---
+- name: Create apt keyrings directory
+  file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: '0755'
+
+- name: Add PostgreSQL apt repo signing key (PGDG)
+  apt_key:
+    url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
+    state: present
+    keyring: /etc/apt/keyrings/pgdg.gpg
+
+- name: Add PostgreSQL apt repository (PGDG)
+  apt_repository:
+    repo: "deb [signed-by=/etc/apt/keyrings/pgdg.gpg] https://apt.postgresql.org/pub/repos/apt {{ ansible_distribution_release }}-pgdg main"
+    state: present
+
+- name: Install PostgreSQL
+  apt:
+    name:
+      - postgresql-15
+      - postgresql-client-15
+      - postgresql-contrib-15
+    state: present
+    update_cache: yes
+
+- name: Stop PostgreSQL for base backup
+  systemd:
+    name: postgresql
+    state: stopped
+
+- name: Remove existing data directory
+  file:
+    path: /var/lib/postgresql/15/main
+    state: absent
+
+- name: Run pg_basebackup from primary
+  command: >
+    pg_basebackup -h {{ primary_host }} -D /var/lib/postgresql/15/main -U replicator -v -P
+  environment:
+    PGPASSWORD: "{{ pg_replication_password }}"
+  become: yes
+  become_user: postgres
+
+- name: Set ownership of data directory
+  file:
+    path: /var/lib/postgresql/15/main
+    owner: postgres
+    group: postgres
+    mode: '0700'
+    recurse: yes
+
+- name: Create standby.signal file
+  file:
+    path: /var/lib/postgresql/15/main/standby.signal
+    state: touch
+    owner: postgres
+    group: postgres
+    mode: '0600'
+
+- name: Configure postgresql.conf for replica
+  copy:
+    dest: /var/lib/postgresql/15/main/postgresql.conf
+    content: |
+      include_config_file = '/etc/postgresql/15/main/postgresql.conf'
+      primary_conninfo = 'host={{ primary_host }} port=5432 user=replicator password={{ pg_replication_password }} application_name={{ inventory_hostname }}'
+      primary_slot_name = 'replica_slot_{{ inventory_hostname }}'
+      hot_standby = on
+      wal_receiver_status_interval = 10s
+  notify: restart postgresql
+
+- name: Start and enable PostgreSQL
+  systemd:
+    name: postgresql
+    enabled: yes
+    state: started
+
+- name: Verify replication status
+  command: psql -c "SELECT * FROM pg_stat_wal_receiver;"
+  become: yes
+  become_user: postgres
+  register: replication_status
+  changed_when: false
+  failed_when: false
+
+- name: Output replication status
+  debug:
+    msg: "{{ replication_status.stdout }}"

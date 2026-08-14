@@ -1,0 +1,9 @@
+---
+- name: Include Calico CNI installation
+  include_tasks: calico.yml
+
+- name: Include ingress-nginx installation
+  include_tasks: ingress-nginx.yml
+
+- name: Include kube-state-metrics installation
+  include_tasks: kube-state-metrics.yml

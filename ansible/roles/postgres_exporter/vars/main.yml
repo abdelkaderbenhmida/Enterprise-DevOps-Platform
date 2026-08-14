@@ -1,0 +1,4 @@
+---
+# postgres_exporter role vars
+postgres_exporter_install_method: "binary"
+postgres_exporter_binary_checksum: ""

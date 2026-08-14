@@ -1,0 +1,10 @@
+---
+# Deploy apps role defaults
+kubeconfig_path: "/home/ubuntu/.kube/config"
+manifests_path: "{{ playbook_dir }}/../kubernetes"
+namespaces:
+  - app1
+  - app2
+  - app3
+  - ingress-nginx
+  - monitoring

@@ -1,0 +1,27 @@
+---
+- name: Setup Prometheus + exporters on monitoring nodes
+  hosts: prometheus
+  become: true
+  roles:
+    - prometheus
+    - node_exporter
+    - postgres_exporter
+
+- name: Setup Grafana with provisioned dashboards
+  hosts: grafana
+  become: true
+  roles:
+    - grafana
+    - node_exporter
+
+- name: Install node_exporter on all remaining nodes
+  hosts: all:!prometheus:!grafana
+  become: true
+  roles:
+    - node_exporter
+
+- name: Install postgres_exporter on PostgreSQL nodes
+  hosts: postgresql
+  become: true
+  roles:
+    - postgres_exporter

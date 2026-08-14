@@ -1,0 +1,66 @@
+---
+# HAProxy LB role defaults
+haproxy_version: "2.8.*"
+haproxy_packages:
+  - haproxy
+
+haproxy_config:
+  global:
+    log: "/dev/log local0"
+    maxconn: 4096
+    user: "haproxy"
+    group: "haproxy"
+    daemon: true
+  defaults:
+    log: "global"
+    mode: "tcp"
+    option: "tcplog"
+    option_dontlognull: true
+    timeout_connect: "10s"
+    timeout_client: "1m"
+    timeout_server: "1m"
+    retries: 3
+
+haproxy_frontend:
+  name: "kubernetes_api"
+  bind: "*:6443"
+  default_backend: "k8s_masters"
+
+haproxy_backend:
+  name: "k8s_masters"
+  balance: "roundrobin"
+  option_httpchk: "GET /healthz"
+  http_check_expect: "status 200"
+  servers: []  # Populated dynamically from inventory
+
+haproxy_stats:
+  enabled: true
+  bind: "*:9000"
+  uri: "/stats"
+  refresh: "30s"
+  auth_user: "admin"
+  auth_password: "changeme"
+
+keepalived_version: "2.2.*"
+keepalived_packages:
+  - keepalived
+
+keepalived_config:
+  vrrp_instance:
+    name: "VI_1"
+    virtual_router_id: 51
+    interface: "eth0"
+    virtual_ipaddress:
+      - "10.0.1.100/24"
+    authentication:
+      auth_type: "PASS"
+      auth_pass: "changeme"
+  vrrp_script:
+    name: "chk_haproxy"
+    script: "killall -0 haproxy"
+    interval: 2
+    weight: 2
+
+sysctl_settings:
+  net.ipv4.ip_nonlocal_bind: 1
+  net.ipv4.ip_forward: 1

@@ -1,0 +1,5 @@
+---
+# Common role vars - override defaults per environment if needed
+# This file can be used for environment-specific overrides
+common_timezone: "UTC"
+common_locale: "en_US.UTF-8"

@@ -1,0 +1,6 @@
+---
+# kubernetes role vars
+calico_version: "v3.27.0"
+ingress_nginx_version: "4.10.0"
+calico_helm_repo_url: "https://docs.tigera.io/calico/charts"
+ingress_nginx_helm_repo_url: "https://kubernetes.github.io/ingress-nginx"

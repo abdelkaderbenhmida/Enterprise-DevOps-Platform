@@ -1,0 +1,6 @@
+---
+# Jenkins agent role vars
+jenkins_master_host: "{{ hostvars['vm05-jenkins-master']['ansible_host'] | default('10.0.2.20') }}"
+jenkins_agent_secret: "{{ lookup('env', 'JENKINS_AGENT_SECRET') | default('changeme', true) }}"
+jenkins_agent_labels: "docker node python go"
+jenkins_master_pub_key_path: "~/.ssh/id_rsa.pub"

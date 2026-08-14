@@ -1,0 +1,4 @@
+---
+# node_exporter role vars
+node_exporter_install_method: "binary"
+node_exporter_binary_checksum: ""

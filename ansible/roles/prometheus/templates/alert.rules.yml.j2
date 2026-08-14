@@ -1,0 +1,116 @@
+groups:
+  - name: node-alerts
+    rules:
+      - alert: NodeDown
+        expr: up{job="node_exporter"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Node {{ $labels.instance }} down"
+          description: "{{ $labels.instance }} has been down for more than 2 minutes."
+
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) < 0.15
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Disk space low on {{ $labels.instance }}"
+          description: "Less than 15% disk space remaining on {{ $labels.instance }}"
+
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 85
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage on {{ $labels.instance }}"
+          description: "CPU usage above 85% for more than 10 minutes."
+
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage on {{ $labels.instance }}"
+          description: "Memory usage above 85% for more than 10 minutes."
+
+  - name: kubernetes-alerts
+    rules:
+      - alert: KubePodCrashLooping
+        expr: rate(kube_pod_container_status_restarts_total[15m]) > 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Pod {{ $labels.namespace }}/{{ $labels.pod }} crash looping"
+          description: "Pod has been restarting frequently."
+
+      - alert: KubePodNotReady
+        expr: kube_pod_status_ready{condition="true"} == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Pod {{ $labels.namespace }}/{{ $labels.pod }} not ready"
+          description: "Pod has been not ready for more than 5 minutes."
+
+      - alert: KubeNodeNotReady
+        expr: kube_node_status_condition{condition="Ready",status="true"} == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Node {{ $labels.node }} not ready"
+          description: "Node has been not ready for more than 5 minutes."
+
+  - name: postgresql-alerts
+    rules:
+      - alert: PostgresReplicationLagHigh
+        expr: pg_replication_lag_seconds > 30
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "PostgreSQL replication lag high on {{ $labels.instance }}"
+          description: "Replication lag is {{ $value }} seconds."
+
+      - alert: PostgresTooManyConnections
+        expr: (pg_stat_database_numbackends / pg_settings_max_connections) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "PostgreSQL connections high on {{ $labels.instance }}"
+          description: "More than 80% of max connections in use."
+
+      - alert: PostgresDown
+        expr: pg_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL down on {{ $labels.instance }}"
+          description: "PostgreSQL instance is not responding."
+
+  - name: haproxy-alerts
+    rules:
+      - alert: HAProxyBackendDown
+        expr: haproxy_backend_agg_server_status{state="UP"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "HAProxy backend {{ $labels.proxy }} has no healthy servers"
+          description: "Backend server is marked as down."
+
+      - alert: HAProxyHighSessionUsage
+        expr: (haproxy_backend_current_sessions / haproxy_backend_sessions_limit) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "HAProxy backend {{ $labels.backend }} high session usage"
+          description: "Session usage above 80%."

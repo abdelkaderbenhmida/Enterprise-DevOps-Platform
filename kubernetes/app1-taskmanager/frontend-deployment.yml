@@ -1,0 +1,43 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app1-frontend
+  namespace: app1
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: app1-frontend
+  template:
+    metadata:
+      labels:
+        app: app1-frontend
+    spec:
+      containers:
+      - name: frontend
+        # Replaced at deploy time by Jenkins (commit-sha tag) or
+        # local/k8s/deploy-to-kind.sh. Change <your-org> to the real GHCR org.
+        # Never use :latest — it breaks rollback and rolling-update determinism.
+        image: ghcr.io/your-org/app1-frontend:v1.0.0
+        ports:
+        - containerPort: 80
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        resources:
+          requests:
+            cpu: "50m"
+            memory: "64Mi"
+          limits:
+            cpu: "200m"
+            memory: "256Mi"

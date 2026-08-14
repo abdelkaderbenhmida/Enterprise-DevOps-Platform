@@ -1,0 +1,12 @@
+---
+- name: Setup Jenkins master
+  hosts: jenkins_master
+  become: true
+  roles:
+    - jenkins-master
+
+- name: Setup Jenkins agents (JNLP, Docker available for image builds)
+  hosts: jenkins_agent
+  become: true
+  roles:
+    - jenkins-agent

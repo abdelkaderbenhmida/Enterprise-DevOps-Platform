@@ -1,0 +1,6 @@
+---
+- name: Deploy applications to Kubernetes (namespaces + app1/app2/app3 manifests)
+  hosts: k8s_control_plane[0]
+  become: true
+  roles:
+    - deploy-apps

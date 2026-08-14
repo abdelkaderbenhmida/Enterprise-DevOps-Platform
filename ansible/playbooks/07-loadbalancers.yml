@@ -1,0 +1,12 @@
+---
+- name: Setup HAProxy load balancer (K8s API 6443 -> control planes)
+  hosts: haproxy_lb
+  become: true
+  roles:
+    - haproxy-lb
+
+- name: Setup NGINX load balancer (app traffic -> Ingress controller NodePorts)
+  hosts: nginx_lb
+  become: true
+  roles:
+    - nginx-lb

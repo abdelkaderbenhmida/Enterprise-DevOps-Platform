@@ -1,0 +1,70 @@
+---
+- name: Install Java
+  apt:
+    name:
+      - openjdk-17-jdk
+    state: present
+    update_cache: yes
+
+- name: Install Docker
+  include_role:
+    name: docker
+
+- name: Create jenkins user
+  user:
+    name: jenkins
+    shell: /bin/bash
+    home: /home/jenkins
+    groups: docker
+    append: yes
+
+- name: Create .ssh directory for jenkins user
+  file:
+    path: /home/jenkins/.ssh
+    state: directory
+    owner: jenkins
+    group: jenkins
+    mode: '0700'
+
+- name: Copy Jenkins master public key for JNLP
+  copy:
+    content: "{{ jenkins_master_pub_key | default('') }}"
+    dest: /home/jenkins/.ssh/authorized_keys
+    owner: jenkins
+    group: jenkins
+    mode: '0600'
+  when: jenkins_master_pub_key is defined
+
+- name: Download Jenkins agent JAR
+  get_url:
+    url: "http://{{ jenkins_master_host }}:8080/jnlpJars/agent.jar"
+    dest: /home/jenkins/agent.jar
+    owner: jenkins
+    group: jenkins
+    mode: '0644'
+
+- name: Create Jenkins agent systemd service
+  copy:
+    dest: /etc/systemd/system/jenkins-agent.service
+    content: |
+      [Unit]
+      Description=Jenkins Agent
+      After=network.target
+
+      [Service]
+      Type=simple
+      User=jenkins
+      WorkingDirectory=/home/jenkins
+      ExecStart=/usr/bin/java -jar /home/jenkins/agent.jar -url http://{{ jenkins_master_host }}:8080 -secret {{ jenkins_agent_secret }} -name "{{ inventory_hostname }}" -webSocket -workDir /home/jenkins
+      Restart=always
+      RestartSec=10
+
+      [Install]
+      WantedBy=multi-user.target
+
+- name: Enable and start Jenkins agent
+  systemd:
+    name: jenkins-agent
+    enabled: yes
+    state: started
+    daemon_reload: yes

@@ -1,0 +1,19 @@
+---
+# Jenkins agent role defaults
+jenkins_agent_version: "1.0"
+jenkins_agent_packages:
+  - openjdk-17-jdk
+
+jenkins_agent_user: "jenkins"
+jenkins_agent_home: "/home/jenkins"
+jenkins_agent_workdir: "/home/jenkins"
+
+jenkins_agent_labels: "docker node"
+jenkins_agent_jar_url: "http://{{ jenkins_master_host }}:8080/jnlpJars/agent.jar"
+jenkins_agent_jar_path: "/home/jenkins/agent.jar"
+
+jenkins_agent_service:
+  name: "jenkins-agent"
+  description: "Jenkins Agent"
+  restart: "always"
+  restart_sec: 10

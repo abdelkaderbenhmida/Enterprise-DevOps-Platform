@@ -1,0 +1,57 @@
+---
+# Grafana role defaults
+grafana_version: "10.2.2"
+grafana_packages:
+  - grafana
+
+grafana_config:
+  server:
+    domain: "localhost"
+    root_url: "%(protocol)s://%(domain)s:%(http_port)s/"
+    serve_from_sub_path: false
+  database:
+    type: "sqlite3"
+    path: "grafana.db"
+  security:
+    admin_user: "admin"
+    admin_password: "admin"
+    secret_key: "changeme"
+    login_remember_days: 7
+    cookie_username: "grafana_user"
+    cookie_remember_name: "grafana_remember"
+  users:
+    allow_sign_up: false
+    allow_org_create: false
+    auto_assign_org: true
+    auto_assign_org_role: "Viewer"
+  auth:
+    disable_login_form: false
+    disable_signout_menu: false
+  auth.anonymous:
+    enabled: false
+  log:
+    mode: "console"
+    level: "info"
+  dashboard:
+    default_home_dashboard_path: ""
+
+grafana_datasources:
+  - name: "Prometheus"
+    type: "prometheus"
+    access: "proxy"
+    url: "http://localhost:9090"
+    isDefault: true
+    editable: false
+
+grafana_dashboard_providers:
+  - name: "default"
+    orgId: 1
+    folder: ""
+    type: "file"
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: "/var/lib/grafana/dashboards"
+
+grafana_dashboard_path: "/var/lib/grafana/dashboards"

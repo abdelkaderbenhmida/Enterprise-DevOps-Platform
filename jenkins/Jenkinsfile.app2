@@ -1,0 +1,105 @@
+@Library('devops-shared-lib') _
+
+// NOTE: every stage checks out the repo itself — stages run on different
+// labelled agents (docker/node/kubernetes) and must not assume a shared
+// workspace. Image refs are computed inside script blocks AFTER checkout,
+// never in the environment block (no git repo exists there, and
+// GITHUB_REPOSITORY_OWNER is a GitHub Actions variable that Jenkins lacks).
+
+pipeline {
+  agent none
+
+  environment {
+    REGISTRY = 'ghcr.io'
+    REGISTRY_CREDENTIALS = 'docker-registry-creds'
+    KUBECONFIG_CREDENTIALS = 'kubeconfig'
+    APP_NAME = 'app2'
+    NAMESPACE = 'app2'
+  }
+
+  stages {
+    stage('Test') {
+      agent { label 'node' }
+      steps {
+        checkout scm
+        dir('applications/app2/src') {
+          sh 'npm ci'
+          sh 'npm test -- --watchAll=false --passWithNoTests'
+        }
+      }
+    }
+
+    stage('Build & Push') {
+      agent { label 'docker' }
+      steps {
+        checkout scm
+        script {
+          def commit = gitCommitShort()
+          def org = imageOrg()
+          def image = "${REGISTRY}/${org}/${APP_NAME}-node"
+          docker.build("${image}:${commit}", "-f docker/app2-node/Dockerfile .")
+          docker.withRegistry("https://${REGISTRY}", REGISTRY_CREDENTIALS) {
+            docker.image("${image}:${commit}").push()
+          }
+        }
+      }
+    }
+
+    stage('Deploy to Kubernetes') {
+      agent { label 'kubernetes' }
+      steps {
+        checkout scm
+        script {
+          def commit = gitCommitShort()
+          def org = imageOrg()
+          def image = "${REGISTRY}/${org}/${APP_NAME}-node:${commit}"
+          withCredentials([file(credentialsId: KUBECONFIG_CREDENTIALS, variable: 'KUBECONFIG')]) {
+            sh """
+              export KUBECONFIG=\$KUBECONFIG
+              kubectl set image deployment/app2-node -n ${NAMESPACE} node=${image}
+              kubectl rollout status deployment/app2-node -n ${NAMESPACE} --timeout=120s
+            """
+          }
+        }
+      }
+    }
+
+    stage('Smoke Test') {
+      agent { label 'kubernetes' }
+      steps {
+        checkout scm
+        withCredentials([file(credentialsId: KUBECONFIG_CREDENTIALS, variable: 'KUBECONFIG')]) {
+          sh """
+            export KUBECONFIG=\$KUBECONFIG
+            sleep 10
+            kubectl get pods -n ${NAMESPACE} -l app=app2-node -o jsonpath='{.items[*].status.phase}' | grep -q Running
+          """
+        }
+      }
+    }
+  }
+
+  post {
+    always {
+      cleanWs()
+    }
+    failure {
+      emailext (
+        subject: "FAILED: ${env.JOB_NAME} - Build #${env.BUILD_NUMBER}",
+        body: "Build failed: ${env.BUILD_URL}",
+        to: 'devops-team@company.com'
+      )
+    }
+  }
+}
+
+def gitCommitShort() {
+  return sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+}
+
+def imageOrg() {
+  def url = sh(script: 'git remote get-url origin 2>/dev/null', returnStdout: true).trim()
+  if (!url) return env.IMAGE_ORG ?: 'your-org'
+  def parts = url.split('[/:]')
+  return parts[parts.length - 2]
+}

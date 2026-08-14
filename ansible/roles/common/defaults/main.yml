@@ -1,0 +1,46 @@
+---
+# Common role defaults
+packages:
+  - curl
+  - wget
+  - vim
+  - htop
+  - net-tools
+  - iproute2
+  - ca-certificates
+  - gnupg
+  - lsb-release
+  - software-properties-common
+  - python3
+  - python3-pip
+  - python3-apt
+  - unzip
+  - git
+  - jq
+  - tcpdump
+  - strace
+  - sysstat
+
+timezone: "UTC"
+
+kernel_modules:
+  - overlay
+  - br_netfilter
+
+sysctl_settings:
+  net.bridge.bridge-nf-call-iptables: 1
+  net.bridge.bridge-nf-call-ip6tables: 1
+  net.ipv4.ip_forward: 1
+
+limits:
+  nofile:
+    soft: 65536
+    hard: 65536
+
+journald:
+  SystemMaxUse: "500M"
+  ForwardToSyslog: "no"
+
+containerd_version: "1.7.1"
+containerd_config_version: 2
+containerd_sandbox_image: "registry.k8s.io/pause:3.9"

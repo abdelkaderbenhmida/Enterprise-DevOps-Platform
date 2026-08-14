@@ -1,0 +1,32 @@
+---
+- name: Create monitoring namespace
+  kubernetes.core.k8s:
+    state: present
+    src: "{{ playbook_dir }}/../kubernetes/namespaces.yml"
+  delegate_to: "{{ groups['k8s_control_plane'][0] }}"
+  become: yes
+  become_user: ubuntu
+
+- name: Deploy kube-state-metrics (monitoring namespace)
+  kubernetes.core.k8s:
+    state: present
+    src: "{{ playbook_dir }}/../kubernetes/kube-state-metrics/"
+  delegate_to: "{{ groups['k8s_control_plane'][0] }}"
+  become: yes
+  become_user: ubuntu
+
+- name: Wait for kube-state-metrics pods to be ready
+  kubernetes.core.k8s_info:
+    kind: Pod
+    namespace: monitoring
+    label_selectors:
+      - app.kubernetes.io/name == kube-state-metrics
+  register: ksm_pods
+  until:
+    - ksm_pods.resources | length > 0
+    - ksm_pods.resources | selectattr('status.phase', 'equalto', 'Running') | list | length == ksm_pods.resources | length
+  retries: 30
+  delay: 10
+  delegate_to: "{{ groups['k8s_control_plane'][0] }}"
+  become: yes
+  become_user: ubuntu

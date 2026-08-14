@@ -1,0 +1,72 @@
+---
+- name: Create postgres_exporter user
+  user:
+    name: postgres_exporter
+    shell: /bin/false
+    home: /var/lib/postgres_exporter
+    system: yes
+
+- name: Download postgres_exporter
+  get_url:
+    url: "https://github.com/prometheus-community/postgres_exporter/releases/download/v{{ postgres_exporter_version }}/postgres_exporter-{{ postgres_exporter_version }}.linux-amd64.tar.gz"
+    dest: /tmp/postgres_exporter.tar.gz
+    mode: '0644'
+
+- name: Extract postgres_exporter
+  unarchive:
+    src: /tmp/postgres_exporter.tar.gz
+    dest: /tmp
+    remote_src: yes
+
+- name: Install postgres_exporter binary
+  copy:
+    src: "/tmp/postgres_exporter-{{ postgres_exporter_version }}.linux-amd64/postgres_exporter"
+    dest: /usr/local/bin/postgres_exporter
+    remote_src: yes
+    mode: '0755'
+
+- name: Create postgres_exporter environment file
+  copy:
+    dest: /etc/default/postgres_exporter
+    content: |
+      DATA_SOURCE_NAME="postgresql://monitoring:{{ pg_monitoring_password }}@localhost:5432/postgres?sslmode=disable"
+      PG_EXPORTER_WEB_LISTEN_ADDRESS=":9187"
+      PG_EXPORTER_EXTEND_QUERY_PATH="/etc/postgres_exporter/queries.yaml"
+
+- name: Create custom queries file
+  copy:
+    dest: /etc/postgres_exporter/queries.yaml
+    content: |
+      pg_replication_lag:
+        query: "SELECT CASE WHEN pg_last_wal_receive_lsn() = pg_last_wal_replay_lsn() THEN 0 ELSE EXTRACT(EPOCH FROM (now() - pg_last_xact_replay_timestamp())) END AS seconds"
+        metrics:
+          - seconds:
+              usage: "GAUGE"
+              description: "Replication lag in seconds"
+
+- name: Create postgres_exporter systemd service
+  copy:
+    dest: /etc/systemd/system/postgres_exporter.service
+    content: |
+      [Unit]
+      Description=PostgreSQL Exporter
+      Wants=network-online.target
+      After=network-online.target
+
+      [Service]
+      User=postgres_exporter
+      Group=postgres_exporter
+      Type=simple
+      EnvironmentFile=/etc/default/postgres_exporter
+      ExecStart=/usr/local/bin/postgres_exporter
+      Restart=always
+
+      [Install]
+      WantedBy=multi-user.target
+
+- name: Enable and start postgres_exporter
+  systemd:
+    name: postgres_exporter
+    enabled: yes
+    state: started
+    daemon_reload: yes

@@ -1,0 +1,10 @@
+---
+# prometheus role vars
+prometheus_version: "2.48.0"
+prometheus_retention: "30d"
+prometheus_storage_path: "/var/lib/prometheus/data"
+prometheus_config_path: "/etc/prometheus"
+prometheus_web_listen_address: ":9090"
+prometheus_external_labels:
+  cluster: "enterprise-devops"
+  environment: "dev"

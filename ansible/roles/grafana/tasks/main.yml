@@ -1,0 +1,89 @@
+---
+- name: Install dependencies
+  apt:
+    name:
+      - apt-transport-https
+      - software-properties-common
+      - wget
+    state: present
+    update_cache: yes
+
+- name: Create apt keyrings directory
+  file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: '0755'
+
+- name: Add Grafana GPG key
+  apt_key:
+    url: https://packages.grafana.com/gpg.key
+    state: present
+    keyring: /etc/apt/keyrings/grafana.gpg
+
+- name: Add Grafana repository
+  apt_repository:
+    repo: "deb [signed-by=/etc/apt/keyrings/grafana.gpg] https://packages.grafana.com/oss/deb stable main"
+    state: present
+
+- name: Install Grafana
+  apt:
+    name: grafana
+    state: present
+    update_cache: yes
+
+- name: Configure Grafana
+- name: Configure Grafana datasource
+  copy:
+    dest: /etc/grafana/provisioning/datasources/prometheus.yaml
+    content: |
+      apiVersion: 1
+      datasources:
+        - name: Prometheus
+          type: prometheus
+          access: proxy
+          url: http://{{ prometheus_url }}:9090
+          isDefault: true
+          editable: false
+  vars:
+    prometheus_url: "{{ (groups['prometheus'] | select('ne', inventory_hostname) | map('extract', hostvars, 'ansible_host') | first | default('127.0.0.1')) }}"
+
+- name: Configure Grafana dashboard provider
+  copy:
+    dest: /etc/grafana/provisioning/dashboards/dashboard.yaml
+    content: |
+      apiVersion: 1
+      providers:
+        - name: 'default'
+          orgId: 1
+          folder: ''
+          type: file
+          disableDeletion: false
+          updateIntervalSeconds: 10
+          allowUiUpdates: true
+          options:
+            path: /var/lib/grafana/dashboards
+
+- name: Create dashboards directory
+  file:
+    path: /var/lib/grafana/dashboards
+    state: directory
+    owner: grafana
+    group: grafana
+    mode: '0755'
+
+- name: Copy dashboard files
+  copy:
+    src: "{{ item }}"
+    dest: "/var/lib/grafana/dashboards/{{ item | basename }}"
+    owner: grafana
+    group: grafana
+    mode: '0644'
+  with_fileglob:
+    - "{{ playbook_dir }}/../monitoring/grafana/dashboards/*.json"
+  when: playbook_dir is defined
+
+- name: Enable and start Grafana
+  systemd:
+    name: grafana-server
+    enabled: yes
+    state: started

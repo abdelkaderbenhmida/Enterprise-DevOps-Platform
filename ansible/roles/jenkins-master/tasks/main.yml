@@ -1,0 +1,132 @@
+---
+- name: Install Java
+  apt:
+    name:
+      - openjdk-17-jdk
+      - fontconfig
+    state: present
+    update_cache: yes
+
+- name: Create apt keyrings directory
+  file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: '0755'
+
+- name: Add Jenkins GPG key
+  apt_key:
+    url: https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key
+    state: present
+    keyring: /etc/apt/keyrings/jenkins.gpg
+
+- name: Add Jenkins repository
+  apt_repository:
+    repo: "deb [signed-by=/etc/apt/keyrings/jenkins.gpg] https://pkg.jenkins.io/debian-stable binary/"
+    state: present
+
+- name: Install Jenkins
+  apt:
+    name: jenkins
+    state: present
+    update_cache: yes
+
+- name: Install Jenkins plugins
+  jenkins_plugin:
+    name: "{{ item }}"
+    state: present
+    url: "http://localhost:8080"
+    url_username: "{{ jenkins_admin_user }}"
+    url_password: "{{ jenkins_admin_password }}"
+  loop:
+    - workflow-aggregator
+    - git
+    - docker-workflow
+    - kubernetes
+    - kubernetes-cli
+    - configuration-as-code
+    - credentials-binding
+    - pipeline-stage-view
+    - blueocean
+    - prometheus
+    - authorize-project
+  register: plugin_install
+  until: plugin_install is succeeded
+  retries: 3
+  delay: 10
+
+- name: Configure Jenkins with JCasC
+  copy:
+    dest: /var/lib/jenkins/casc.yaml
+    content: |
+      jenkins:
+        systemMessage: "Enterprise DevOps Platform Jenkins"
+        numExecutors: 0
+        mode: NORMAL
+        securityRealm:
+          local:
+            allowsSignup: false
+        authorizationStrategy:
+          loggedInUsersCanDoEverything:
+            allowAnonymousRead: false
+      credentials:
+        system:
+          domainCredentials:
+            - credentials:
+                - usernamePassword:
+                    scope: GLOBAL
+                    id: "docker-registry-creds"
+                    username: "{{ docker_registry_user }}"
+                    password: "{{ docker_registry_password }}"
+                    description: "Docker Registry Credentials"
+                - string:
+                    scope: GLOBAL
+                    id: "github-token"
+                    secret: "{{ github_token }}"
+                    description: "GitHub Personal Access Token"
+                - sshUserPrivateKey:
+                    scope: GLOBAL
+                    id: "ssh-key"
+                    username: "jenkins"
+                    privateKey: "{{ jenkins_ssh_private_key }}"
+                    description: "SSH Key for Git"
+      tool:
+        git:
+          installations:
+            - name: "Default"
+              home: "/usr/bin/git"
+        docker:
+          installations:
+            - name: "docker"
+              home: "/usr/bin/docker"
+  notify: restart jenkins
+
+- name: Create Jenkins admin user via Groovy
+  copy:
+    dest: /var/lib/jenkins/init.groovy.d/create-admin.groovy
+    content: |
+      import jenkins.model.*
+      import hudson.security.*
+      import hudson.util.*
+
+      def instance = Jenkins.getInstance()
+      def user = instance.getSecurityRealm().createAccount("{{ jenkins_admin_user }}", "{{ jenkins_admin_password }}")
+      user.save()
+      def strategy = new FullControlOnceLoggedInAuthorizationStrategy()
+      strategy.setAllowAnonymousRead(false)
+      instance.setAuthorizationStrategy(strategy)
+      instance.save()
+
+- name: Enable and start Jenkins
+  systemd:
+    name: jenkins
+    enabled: yes
+    state: started
+
+- name: Wait for Jenkins to be ready
+  uri:
+    url: "http://localhost:8080/login"
+    status_code: 200
+  register: jenkins_ready
+  until: jenkins_ready is succeeded
+  retries: 30
+  delay: 10

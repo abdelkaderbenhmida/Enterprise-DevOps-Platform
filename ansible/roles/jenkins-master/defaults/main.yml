@@ -1,0 +1,68 @@
+---
+# Jenkins master role defaults
+jenkins_version: "2.440.1"
+jenkins_packages:
+  - openjdk-17-jdk
+  - fontconfig
+  - jenkins
+
+jenkins_plugins:
+  - workflow-aggregator
+  - git
+  - docker-workflow
+  - kubernetes
+  - kubernetes-cli
+  - configuration-as-code
+  - credentials-binding
+  - pipeline-stage-view
+  - blueocean
+  - prometheus
+  - authorize-project
+
+jenkins_admin_user: "admin"
+jenkins_admin_password: "changeme"
+
+jenkins_casc_config:
+  jenkins:
+    systemMessage: "Enterprise DevOps Platform Jenkins"
+    numExecutors: 0
+    mode: "NORMAL"
+    securityRealm:
+      local:
+        allowsSignup: false
+    authorizationStrategy:
+      loggedInUsersCanDoEverything:
+        allowAnonymousRead: false
+  credentials:
+    system:
+      domainCredentials:
+        - credentials:
+            - usernamePassword:
+                scope: GLOBAL
+                id: "docker-registry-creds"
+                username: "{{ docker_registry_user }}"
+                password: "{{ docker_registry_password }}"
+                description: "Docker Registry Credentials"
+            - string:
+                scope: GLOBAL
+                id: "github-token"
+                secret: "{{ github_token }}"
+                description: "GitHub Personal Access Token"
+            - sshUserPrivateKey:
+                scope: GLOBAL
+                id: "ssh-key"
+                username: "jenkins"
+                privateKey: "{{ jenkins_ssh_private_key }}"
+                description: "SSH Key for Git"
+  tool:
+    git:
+      installations:
+        - name: "Default"
+          home: "/usr/bin/git"
+    docker:
+      installations:
+        - name: "docker"
+          home: "/usr/bin/docker"
+
+jenkins_gpg_key_url: "https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key"
+jenkins_repo_url: "deb https://pkg.jenkins.io/debian-stable binary/"

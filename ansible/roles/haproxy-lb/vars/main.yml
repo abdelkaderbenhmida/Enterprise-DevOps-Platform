@@ -1,0 +1,9 @@
+---
+# HAProxy LB role vars
+haproxy_stats_password: "{{ lookup('env', 'HAPROXY_STATS_PASSWORD') | default('changeme', true) }}"
+keepalived_auth_pass: "{{ lookup('env', 'KEEPALIVED_AUTH_PASS') | default('changeme', true) }}"
+haproxy_vip: "10.0.1.100"
+haproxy_interface: "eth0"
+keepalived_virtual_router_id: 51
+keepalived_master_priority: 101
+keepalived_backup_priority: 100

@@ -1,0 +1,31 @@
+---
+# Orchestrator: runs every playbook in dependency order.
+# Note: load balancers (07) run BEFORE the Kubernetes control plane (03) because
+# kubeadm init targets the HAProxy VIP (10.0.1.100:6443) as
+# --control-plane-endpoint. Individual playbooks can be run directly.
+- name: Common setup
+  import_playbook: playbooks/01-common.yml
+
+- name: Docker
+  import_playbook: playbooks/02-docker.yml
+
+- name: Load balancers (HAProxy for K8s API, NGINX for app traffic)
+  import_playbook: playbooks/07-loadbalancers.yml
+
+- name: Kubernetes HA control plane (init + joins)
+  import_playbook: playbooks/03-k8s-control-plane-ha.yml
+
+- name: Kubernetes worker nodes
+  import_playbook: playbooks/04-k8s-workers.yml
+
+- name: Jenkins master + agents
+  import_playbook: playbooks/05-jenkins.yml
+
+- name: PostgreSQL primary + replica
+  import_playbook: playbooks/06-postgresql-ha.yml
+
+- name: Monitoring stack
+  import_playbook: playbooks/08-monitoring.yml
+
+- name: Deploy applications
+  import_playbook: playbooks/09-deploy-apps.yml

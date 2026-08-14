@@ -1,0 +1,12 @@
+---
+haproxy_vip: "10.0.1.100"
+haproxy_interface: "eth0"
+haproxy_stats_password: "{{ lookup('env', 'HAPROXY_STATS_PASSWORD') | default('changeme', true) }}"
+keepalived_auth_pass: "{{ lookup('env', 'KEEPALIVED_AUTH_PASS') | default('changeme', true) }}"
+nginx_upstream_nodes:
+  - "vm11-k8s-wk1"
+  - "vm12-k8s-wk2"
+  - "vm13-k8s-wk3"
+  - "vm14-k8s-wk4"
+  - "vm15-k8s-wk5"
+  - "vm16-k8s-wk6"

@@ -1,0 +1,22 @@
+.terraform/
+.terraform.tfstate
+.terraform.tfstate.backup
+*.tfvars
+*.log
+venv/
+__pycache__/
+ansible/inventory/*.json
+ansible/inventory/hosts.ini
+node_modules/
+.env
+secrets.yml
+opencode session
+k8s-cp-join-info.json
+ansible/k8s-cp-join-info.json
+.pytest_cache/
+
+# QEMU lab artifacts (multi-GB VM disks) — never push to git
+scripts/qemu-lab/work/
+scripts/qemu-lab/images/
+scripts/qemu-lab/*.qcow2
+scripts/qemu-lab/*.iso

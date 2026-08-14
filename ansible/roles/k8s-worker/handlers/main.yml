@@ -1,0 +1,7 @@
+---
+# k8s-worker role handlers
+- name: restart kubelet
+  systemd:
+    name: kubelet
+    state: restarted
+    daemon_reload: yes
